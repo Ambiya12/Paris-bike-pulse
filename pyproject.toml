@@ -8,7 +8,9 @@ version = "0.1.0"
 description = "Data engineering and forecasting project for Paris bicycle traffic"
 readme = "README.md"
 requires-python = ">=3.11,<3.12"
-dependencies = []
+dependencies = [
+    "python-dotenv>=1.0,<2",
+]
 
 [project.optional-dependencies]
 dev = [
