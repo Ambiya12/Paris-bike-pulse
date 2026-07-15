@@ -51,6 +51,8 @@ The application supports the following settings:
 | `PARIS_BIKE_PULSE_BICYCLE_API_URL` | Paris bicycle counter API endpoint | Paris Open Data |
 | `PARIS_BIKE_PULSE_WEATHER_API_URL` | Historical weather API endpoint | Open-Meteo archive |
 | `PARIS_BIKE_PULSE_REQUEST_TIMEOUT_SECONDS` | External request timeout | `30` |
+| `PARIS_BIKE_PULSE_LOG_LEVEL` | Minimum application log level | `INFO` |
+| `PARIS_BIKE_PULSE_LOG_FORMAT` | Log output format (`json` or `text`) | `json` |
 
 Bronze, Silver, and Gold directories are derived from the configured data root.
 

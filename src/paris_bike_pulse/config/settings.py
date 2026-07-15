@@ -15,6 +15,8 @@ DEFAULT_BICYCLE_API_URL = (
 )
 DEFAULT_WEATHER_API_URL = "https://archive-api.open-meteo.com/v1/archive"
 DEFAULT_REQUEST_TIMEOUT_SECONDS = 30.0
+VALID_LOG_LEVELS = frozenset({"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"})
+VALID_LOG_FORMATS = frozenset({"json", "text"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,6 +28,8 @@ class Settings:
     bicycle_api_url: str
     weather_api_url: str
     request_timeout_seconds: float
+    log_level: str
+    log_format: str
 
     def __post_init__(self) -> None:
         """Validate values that would otherwise fail during pipeline execution."""
@@ -41,6 +45,18 @@ class Settings:
         ):
             raise ValueError(
                 "PARIS_BIKE_PULSE_REQUEST_TIMEOUT_SECONDS must be greater than zero"
+            )
+
+        if self.log_level not in VALID_LOG_LEVELS:
+            raise ValueError(
+                "PARIS_BIKE_PULSE_LOG_LEVEL must be one of "
+                f"{', '.join(sorted(VALID_LOG_LEVELS))}"
+            )
+
+        if self.log_format not in VALID_LOG_FORMATS:
+            raise ValueError(
+                "PARIS_BIKE_PULSE_LOG_FORMAT must be one of "
+                f"{', '.join(sorted(VALID_LOG_FORMATS))}"
             )
 
     @property
@@ -86,6 +102,14 @@ def _parse_timeout(value: str) -> float:
         ) from error
 
 
+def _parse_log_level(value: str) -> str:
+    return value.strip().upper()
+
+
+def _parse_log_format(value: str) -> str:
+    return value.strip().lower()
+
+
 def load_settings(env_file: str | Path | None = ".env") -> Settings:
     """Load settings from process variables, an optional file, and defaults."""
     file_values = {} if env_file is None else dotenv_values(env_file)
@@ -109,5 +133,11 @@ def load_settings(env_file: str | Path | None = ".env") -> Settings:
                 str(DEFAULT_REQUEST_TIMEOUT_SECONDS),
                 file_values,
             )
+        ),
+        log_level=_parse_log_level(
+            _setting_value("PARIS_BIKE_PULSE_LOG_LEVEL", "INFO", file_values)
+        ),
+        log_format=_parse_log_format(
+            _setting_value("PARIS_BIKE_PULSE_LOG_FORMAT", "json", file_values)
         ),
     )
