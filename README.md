@@ -19,9 +19,9 @@ machine-learning model that estimates bicycle traffic one hour ahead.
 
 ## Current status
 
-The project foundation currently provides a Python 3.11 package, environment
-settings, and development tooling. Data pipelines and analytical features will
-be added incrementally.
+The project foundation currently provides a Python 3.11 package, validated
+environment settings, and development tooling. Data pipelines and analytical
+features will be added incrementally.
 
 ## Development setup
 
@@ -33,15 +33,26 @@ source .venv/bin/activate
 python -m pip install --editable ".[dev]"
 ```
 
-Use the example file as a template and export its values when custom settings
-are needed:
+Use the example file as a template when custom settings are needed. Values from
+the process environment take precedence over values in `.env`.
 
 ```bash
 cp .env.example .env
-set -a
-source .env
-set +a
 ```
+
+## Application configuration
+
+The application supports the following settings:
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `PARIS_BIKE_PULSE_ENV` | Runtime environment name | `development` |
+| `PARIS_BIKE_PULSE_DATA_DIR` | Root directory for local datasets | `data` |
+| `PARIS_BIKE_PULSE_BICYCLE_API_URL` | Paris bicycle counter API endpoint | Paris Open Data |
+| `PARIS_BIKE_PULSE_WEATHER_API_URL` | Historical weather API endpoint | Open-Meteo archive |
+| `PARIS_BIKE_PULSE_REQUEST_TIMEOUT_SECONDS` | External request timeout | `30` |
+
+Bronze, Silver, and Gold directories are derived from the configured data root.
 
 ## Quality checks
 
