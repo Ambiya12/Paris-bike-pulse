@@ -51,8 +51,31 @@ The application supports the following settings:
 | `PARIS_BIKE_PULSE_BICYCLE_API_URL` | Paris bicycle counter API endpoint | Paris Open Data |
 | `PARIS_BIKE_PULSE_WEATHER_API_URL` | Historical weather API endpoint | Open-Meteo archive |
 | `PARIS_BIKE_PULSE_REQUEST_TIMEOUT_SECONDS` | External request timeout | `30` |
+| `PARIS_BIKE_PULSE_LOG_LEVEL` | Minimum application log level | `INFO` |
+| `PARIS_BIKE_PULSE_LOG_FORMAT` | Log output format (`json` or `text`) | `json` |
 
 Bronze, Silver, and Gold directories are derived from the configured data root.
+
+## Structured logging
+
+Pipeline logs can be emitted as JSON for automated processing or as readable
+text for local development. Every pipeline logger requires a run identifier and
+can include source-level or message-level context.
+
+```python
+from paris_bike_pulse.config import load_settings
+from paris_bike_pulse.utils import configure_logging, get_pipeline_logger
+
+settings = load_settings()
+configure_logging(settings)
+
+logger = get_pipeline_logger(
+    "ingestion.bicycle",
+    pipeline_run_id="2026-07-16T08:00:00Z",
+    source_name="paris-open-data",
+)
+logger.info("Ingestion completed", extra={"record_count": 120})
+```
 
 ## Quality checks
 
