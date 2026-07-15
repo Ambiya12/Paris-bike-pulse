@@ -56,6 +56,27 @@ The application supports the following settings:
 
 Bronze, Silver, and Gold directories are derived from the configured data root.
 
+## Structured logging
+
+Pipeline logs can be emitted as JSON for automated processing or as readable
+text for local development. Every pipeline logger requires a run identifier and
+can include source-level or message-level context.
+
+```python
+from paris_bike_pulse.config import load_settings
+from paris_bike_pulse.utils import configure_logging, get_pipeline_logger
+
+settings = load_settings()
+configure_logging(settings)
+
+logger = get_pipeline_logger(
+    "ingestion.bicycle",
+    pipeline_run_id="2026-07-16T08:00:00Z",
+    source_name="paris-open-data",
+)
+logger.info("Ingestion completed", extra={"record_count": 120})
+```
+
 ## Quality checks
 
 ```bash
