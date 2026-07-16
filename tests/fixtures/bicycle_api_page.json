@@ -1,0 +1,29 @@
+{
+  "total_count": 2,
+  "results": [
+    {
+      "id_compteur": "100056038-101056038",
+      "nom_compteur": "44 avenue des Champs Elysées SE-NO",
+      "id": "100056038",
+      "name": "44 avenue des Champs Elysées",
+      "sum_counts": 69,
+      "date": "2025-12-31T12:00:00+00:00",
+      "coordinates": {
+        "lon": 2.30743,
+        "lat": 48.86999
+      }
+    },
+    {
+      "id_compteur": "100056038-101056038",
+      "nom_compteur": "44 avenue des Champs Elysées SE-NO",
+      "id": "100056038",
+      "name": "44 avenue des Champs Elysées",
+      "sum_counts": 0,
+      "date": "2025-12-31T21:00:00+00:00",
+      "coordinates": {
+        "lon": 2.30743,
+        "lat": 48.86999
+      }
+    }
+  ]
+}
