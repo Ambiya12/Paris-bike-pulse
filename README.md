@@ -77,6 +77,32 @@ logger = get_pipeline_logger(
 logger.info("Ingestion completed", extra={"record_count": 120})
 ```
 
+## Bicycle counter ingestion
+
+The bicycle client retrieves raw counter records from Paris Open Data in stable,
+newest-first pages. Ingestion is bounded and reports whether the available
+filtered result was fully collected, so record limits never cause silent data
+loss.
+
+```python
+from paris_bike_pulse.config import load_settings
+from paris_bike_pulse.ingestion import ingest_bicycle_records
+
+settings = load_settings()
+result = ingest_bicycle_records(
+    settings,
+    pipeline_run_id="2026-07-16-bicycle-ingestion",
+    max_records=5_000,
+    where="date >= date'2026-07-15' AND date < date'2026-07-16'",
+)
+
+print(len(result.records), result.is_complete)
+```
+
+The public records endpoint limits a query window to 10,000 rows. Incremental
+date filters should therefore be used for normal pipeline runs. Raw records are
+kept unchanged for the future Bronze storage layer.
+
 ## Quality checks
 
 ```bash

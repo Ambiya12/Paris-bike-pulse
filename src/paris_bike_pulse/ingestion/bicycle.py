@@ -6,9 +6,11 @@ from dataclasses import dataclass
 import requests
 
 from paris_bike_pulse.config import Settings
+from paris_bike_pulse.utils import get_pipeline_logger
 
 MAX_PAGE_SIZE = 100
 MAX_RECORD_WINDOW = 10_000
+DEFAULT_MAX_RECORDS = 1_000
 DEFAULT_ORDER_BY = "date DESC, id_compteur ASC"
 
 
@@ -26,6 +28,15 @@ class BicycleApiPage:
 
     records: tuple[dict[str, object], ...]
     total_count: int
+
+
+@dataclass(frozen=True, slots=True)
+class BicycleIngestionResult:
+    """Records collected by one bounded bicycle ingestion run."""
+
+    records: tuple[dict[str, object], ...]
+    total_available: int
+    is_complete: bool
 
 
 def parse_bicycle_api_response(payload: object) -> BicycleApiPage:
@@ -117,3 +128,84 @@ def fetch_bicycle_page(
         ) from error
 
     return parse_bicycle_api_response(payload)
+
+
+def _validate_ingestion_parameters(page_size: int, max_records: int) -> None:
+    if isinstance(page_size, bool) or not 1 <= page_size <= MAX_PAGE_SIZE:
+        raise ValueError(f"page_size must be between 1 and {MAX_PAGE_SIZE}")
+    if isinstance(max_records, bool) or not 1 <= max_records <= MAX_RECORD_WINDOW:
+        raise ValueError(f"max_records must be between 1 and {MAX_RECORD_WINDOW}")
+
+
+def ingest_bicycle_records(
+    settings: Settings,
+    *,
+    pipeline_run_id: str,
+    page_size: int = MAX_PAGE_SIZE,
+    max_records: int = DEFAULT_MAX_RECORDS,
+    where: str | None = None,
+    session: requests.Session | None = None,
+) -> BicycleIngestionResult:
+    """Collect a bounded, newest-first batch of raw bicycle counter records."""
+    _validate_ingestion_parameters(page_size, max_records)
+    logger = get_pipeline_logger(
+        "ingestion.bicycle",
+        pipeline_run_id=pipeline_run_id,
+        source_name="paris-open-data",
+    )
+    records: list[dict[str, object]] = []
+    total_available = 0
+    offset = 0
+
+    owns_session = session is None
+    http_session = session or requests.Session()
+    try:
+        while len(records) < max_records:
+            limit = min(page_size, max_records - len(records))
+            page = fetch_bicycle_page(
+                settings,
+                limit=limit,
+                offset=offset,
+                where=where,
+                session=http_session,
+            )
+            total_available = page.total_count
+
+            if not page.records:
+                if offset < total_available:
+                    raise BicycleApiResponseError(
+                        "bicycle API returned an empty page before total_count"
+                    )
+                break
+
+            records.extend(page.records[: max_records - len(records)])
+            offset += len(page.records)
+            logger.info(
+                "Fetched bicycle API page",
+                extra={
+                    "offset": offset,
+                    "page_record_count": len(page.records),
+                    "total_available": total_available,
+                },
+            )
+
+            if offset >= total_available or offset >= MAX_RECORD_WINDOW:
+                break
+    finally:
+        if owns_session:
+            http_session.close()
+
+    result = BicycleIngestionResult(
+        records=tuple(records),
+        total_available=total_available,
+        is_complete=len(records) >= total_available,
+    )
+    logger.info(
+        "Bicycle record ingestion completed",
+        extra={
+            "fetched_record_count": len(result.records),
+            "total_available": result.total_available,
+            "is_complete": result.is_complete,
+        },
+    )
+    return result
