@@ -50,6 +50,9 @@ The application supports the following settings:
 | `PARIS_BIKE_PULSE_DATA_DIR` | Root directory for local datasets | `data` |
 | `PARIS_BIKE_PULSE_BICYCLE_API_URL` | Paris bicycle counter API endpoint | Paris Open Data |
 | `PARIS_BIKE_PULSE_WEATHER_API_URL` | Historical weather API endpoint | Open-Meteo archive |
+| `PARIS_BIKE_PULSE_WEATHER_LATITUDE` | Weather query latitude | `48.8566` |
+| `PARIS_BIKE_PULSE_WEATHER_LONGITUDE` | Weather query longitude | `2.3522` |
+| `PARIS_BIKE_PULSE_WEATHER_TIMEZONE` | Weather response timezone | `Europe/Paris` |
 | `PARIS_BIKE_PULSE_REQUEST_TIMEOUT_SECONDS` | External request timeout | `30` |
 | `PARIS_BIKE_PULSE_LOG_LEVEL` | Minimum application log level | `INFO` |
 | `PARIS_BIKE_PULSE_LOG_FORMAT` | Log output format (`json` or `text`) | `json` |

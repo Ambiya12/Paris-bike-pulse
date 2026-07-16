@@ -14,6 +14,9 @@ DEFAULT_BICYCLE_API_URL = (
     "comptage-velo-donnees-compteurs/records"
 )
 DEFAULT_WEATHER_API_URL = "https://archive-api.open-meteo.com/v1/archive"
+DEFAULT_WEATHER_LATITUDE = 48.8566
+DEFAULT_WEATHER_LONGITUDE = 2.3522
+DEFAULT_WEATHER_TIMEZONE = "Europe/Paris"
 DEFAULT_REQUEST_TIMEOUT_SECONDS = 30.0
 VALID_LOG_LEVELS = frozenset({"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"})
 VALID_LOG_FORMATS = frozenset({"json", "text"})
@@ -27,6 +30,9 @@ class Settings:
     data_dir: Path
     bicycle_api_url: str
     weather_api_url: str
+    weather_latitude: float
+    weather_longitude: float
+    weather_timezone: str
     request_timeout_seconds: float
     log_level: str
     log_format: str
@@ -38,6 +44,25 @@ class Settings:
 
         _validate_http_url("PARIS_BIKE_PULSE_BICYCLE_API_URL", self.bicycle_api_url)
         _validate_http_url("PARIS_BIKE_PULSE_WEATHER_API_URL", self.weather_api_url)
+
+        if (
+            not math.isfinite(self.weather_latitude)
+            or not -90 <= self.weather_latitude <= 90
+        ):
+            raise ValueError(
+                "PARIS_BIKE_PULSE_WEATHER_LATITUDE must be between -90 and 90"
+            )
+
+        if (
+            not math.isfinite(self.weather_longitude)
+            or not -180 <= self.weather_longitude <= 180
+        ):
+            raise ValueError(
+                "PARIS_BIKE_PULSE_WEATHER_LONGITUDE must be between -180 and 180"
+            )
+
+        if not self.weather_timezone.strip():
+            raise ValueError("PARIS_BIKE_PULSE_WEATHER_TIMEZONE must not be empty")
 
         if (
             not math.isfinite(self.request_timeout_seconds)
@@ -102,6 +127,13 @@ def _parse_timeout(value: str) -> float:
         ) from error
 
 
+def _parse_float(setting_name: str, value: str) -> float:
+    try:
+        return float(value)
+    except ValueError as error:
+        raise ValueError(f"{setting_name} must be a number") from error
+
+
 def _parse_log_level(value: str) -> str:
     return value.strip().upper()
 
@@ -127,6 +159,27 @@ def load_settings(env_file: str | Path | None = ".env") -> Settings:
             DEFAULT_WEATHER_API_URL,
             file_values,
         ),
+        weather_latitude=_parse_float(
+            "PARIS_BIKE_PULSE_WEATHER_LATITUDE",
+            _setting_value(
+                "PARIS_BIKE_PULSE_WEATHER_LATITUDE",
+                str(DEFAULT_WEATHER_LATITUDE),
+                file_values,
+            ),
+        ),
+        weather_longitude=_parse_float(
+            "PARIS_BIKE_PULSE_WEATHER_LONGITUDE",
+            _setting_value(
+                "PARIS_BIKE_PULSE_WEATHER_LONGITUDE",
+                str(DEFAULT_WEATHER_LONGITUDE),
+                file_values,
+            ),
+        ),
+        weather_timezone=_setting_value(
+            "PARIS_BIKE_PULSE_WEATHER_TIMEZONE",
+            DEFAULT_WEATHER_TIMEZONE,
+            file_values,
+        ).strip(),
         request_timeout_seconds=_parse_timeout(
             _setting_value(
                 "PARIS_BIKE_PULSE_REQUEST_TIMEOUT_SECONDS",

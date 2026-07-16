@@ -11,6 +11,9 @@ SETTING_NAMES = (
     "PARIS_BIKE_PULSE_DATA_DIR",
     "PARIS_BIKE_PULSE_BICYCLE_API_URL",
     "PARIS_BIKE_PULSE_WEATHER_API_URL",
+    "PARIS_BIKE_PULSE_WEATHER_LATITUDE",
+    "PARIS_BIKE_PULSE_WEATHER_LONGITUDE",
+    "PARIS_BIKE_PULSE_WEATHER_TIMEZONE",
     "PARIS_BIKE_PULSE_REQUEST_TIMEOUT_SECONDS",
     "PARIS_BIKE_PULSE_LOG_LEVEL",
     "PARIS_BIKE_PULSE_LOG_FORMAT",
@@ -34,6 +37,9 @@ def test_load_settings_uses_development_defaults(
     assert settings.data_dir == Path("data")
     assert settings.bicycle_api_url.startswith("https://opendata.paris.fr/")
     assert settings.weather_api_url == "https://archive-api.open-meteo.com/v1/archive"
+    assert settings.weather_latitude == 48.8566
+    assert settings.weather_longitude == 2.3522
+    assert settings.weather_timezone == "Europe/Paris"
     assert settings.request_timeout_seconds == 30.0
     assert settings.log_level == "INFO"
     assert settings.log_format == "json"
@@ -54,6 +60,9 @@ def test_load_settings_reads_environment_variables(
     monkeypatch.setenv(
         "PARIS_BIKE_PULSE_WEATHER_API_URL", "https://example.test/weather"
     )
+    monkeypatch.setenv("PARIS_BIKE_PULSE_WEATHER_LATITUDE", "48.85")
+    monkeypatch.setenv("PARIS_BIKE_PULSE_WEATHER_LONGITUDE", "2.35")
+    monkeypatch.setenv("PARIS_BIKE_PULSE_WEATHER_TIMEZONE", " UTC ")
     monkeypatch.setenv("PARIS_BIKE_PULSE_REQUEST_TIMEOUT_SECONDS", "12.5")
     monkeypatch.setenv("PARIS_BIKE_PULSE_LOG_LEVEL", "debug")
     monkeypatch.setenv("PARIS_BIKE_PULSE_LOG_FORMAT", "TEXT")
@@ -64,6 +73,9 @@ def test_load_settings_reads_environment_variables(
     assert settings.data_dir == Path("test-data")
     assert settings.bicycle_api_url == "https://example.test/bicycles"
     assert settings.weather_api_url == "https://example.test/weather"
+    assert settings.weather_latitude == 48.85
+    assert settings.weather_longitude == 2.35
+    assert settings.weather_timezone == "UTC"
     assert settings.request_timeout_seconds == 12.5
     assert settings.log_level == "DEBUG"
     assert settings.log_format == "text"
@@ -79,6 +91,9 @@ def test_load_settings_reads_dotenv_without_overriding_environment(
     env_file.write_text(
         "PARIS_BIKE_PULSE_ENV=local\n"
         "PARIS_BIKE_PULSE_DATA_DIR=local-data\n"
+        "PARIS_BIKE_PULSE_WEATHER_LATITUDE=48.86\n"
+        "PARIS_BIKE_PULSE_WEATHER_LONGITUDE=2.34\n"
+        "PARIS_BIKE_PULSE_WEATHER_TIMEZONE=Europe/Paris\n"
         "PARIS_BIKE_PULSE_REQUEST_TIMEOUT_SECONDS=45\n"
         "PARIS_BIKE_PULSE_LOG_LEVEL=WARNING\n"
         "PARIS_BIKE_PULSE_LOG_FORMAT=text\n",
@@ -90,6 +105,9 @@ def test_load_settings_reads_dotenv_without_overriding_environment(
 
     assert settings.environment == "test"
     assert settings.data_dir == Path("local-data")
+    assert settings.weather_latitude == 48.86
+    assert settings.weather_longitude == 2.34
+    assert settings.weather_timezone == "Europe/Paris"
     assert settings.request_timeout_seconds == 45.0
     assert settings.log_level == "WARNING"
     assert settings.log_format == "text"
@@ -108,6 +126,26 @@ def test_load_settings_reads_dotenv_without_overriding_environment(
             "PARIS_BIKE_PULSE_REQUEST_TIMEOUT_SECONDS",
             "invalid",
             "must be a number",
+        ),
+        (
+            "PARIS_BIKE_PULSE_WEATHER_LATITUDE",
+            "north",
+            "must be a number",
+        ),
+        (
+            "PARIS_BIKE_PULSE_WEATHER_LATITUDE",
+            "91",
+            "must be between -90 and 90",
+        ),
+        (
+            "PARIS_BIKE_PULSE_WEATHER_LONGITUDE",
+            "-181",
+            "must be between -180 and 180",
+        ),
+        (
+            "PARIS_BIKE_PULSE_WEATHER_TIMEZONE",
+            " ",
+            "must not be empty",
         ),
         (
             "PARIS_BIKE_PULSE_REQUEST_TIMEOUT_SECONDS",
