@@ -3,6 +3,12 @@
 import math
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import date, datetime
+
+import requests
+
+from paris_bike_pulse.config import Settings
+from paris_bike_pulse.utils import get_pipeline_logger
 
 HOURLY_WEATHER_VARIABLES = (
     "temperature_2m",
@@ -14,6 +20,10 @@ HOURLY_WEATHER_VARIABLES = (
 
 class WeatherApiResponseError(ValueError):
     """Raised when the weather API returns an unexpected response."""
+
+
+class WeatherApiRequestError(RuntimeError):
+    """Raised when a request to the weather API fails."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -138,3 +148,96 @@ def parse_weather_api_response(payload: object) -> WeatherApiData:
         timezone=timezone,
         hourly_units=hourly_units,
     )
+
+
+def _validate_date_range(start_date: date, end_date: date) -> None:
+    if (
+        not isinstance(start_date, date)
+        or isinstance(start_date, datetime)
+        or not isinstance(end_date, date)
+        or isinstance(end_date, datetime)
+    ):
+        raise TypeError("start_date and end_date must be date values")
+    if start_date > end_date:
+        raise ValueError("start_date must be before or equal to end_date")
+
+
+def fetch_hourly_weather(
+    settings: Settings,
+    *,
+    start_date: date,
+    end_date: date,
+    session: requests.Session | None = None,
+) -> WeatherApiData:
+    """Fetch and validate hourly historical weather for the configured location."""
+    _validate_date_range(start_date, end_date)
+    request_parameters = {
+        "latitude": settings.weather_latitude,
+        "longitude": settings.weather_longitude,
+        "start_date": start_date.isoformat(),
+        "end_date": end_date.isoformat(),
+        "hourly": ",".join(HOURLY_WEATHER_VARIABLES),
+        "timezone": settings.weather_timezone,
+        "temperature_unit": "celsius",
+        "precipitation_unit": "mm",
+        "wind_speed_unit": "kmh",
+    }
+
+    owns_session = session is None
+    http_session = session or requests.Session()
+    try:
+        response = http_session.get(
+            settings.weather_api_url,
+            params=request_parameters,
+            timeout=settings.request_timeout_seconds,
+            headers={"Accept": "application/json"},
+        )
+        response.raise_for_status()
+    except requests.RequestException as error:
+        raise WeatherApiRequestError("request to the weather API failed") from error
+    finally:
+        if owns_session:
+            http_session.close()
+
+    try:
+        payload = response.json()
+    except ValueError as error:
+        raise WeatherApiResponseError(
+            "weather API response did not contain valid JSON"
+        ) from error
+
+    return parse_weather_api_response(payload)
+
+
+def ingest_hourly_weather(
+    settings: Settings,
+    *,
+    pipeline_run_id: str,
+    start_date: date,
+    end_date: date,
+    session: requests.Session | None = None,
+) -> WeatherApiData:
+    """Ingest one historical date range and report its collection metadata."""
+    logger = get_pipeline_logger(
+        "ingestion.weather",
+        pipeline_run_id=pipeline_run_id,
+        source_name="open-meteo",
+    )
+    weather_data = fetch_hourly_weather(
+        settings,
+        start_date=start_date,
+        end_date=end_date,
+        session=session,
+    )
+    logger.info(
+        "Hourly weather ingestion completed",
+        extra={
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+            "record_count": len(weather_data.records),
+            "response_latitude": weather_data.latitude,
+            "response_longitude": weather_data.longitude,
+            "response_timezone": weather_data.timezone,
+        },
+    )
+    return weather_data

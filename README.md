@@ -106,6 +106,32 @@ The public records endpoint limits a query window to 10,000 rows. Incremental
 date filters should therefore be used for normal pipeline runs. Raw records are
 kept unchanged for the future Bronze storage layer.
 
+## Historical weather ingestion
+
+The weather client retrieves hourly observations from the Open-Meteo historical
+API for an explicit date range. The configured location defaults to central
+Paris, and the response keeps API-native fields for the future Bronze layer.
+
+```python
+from datetime import date
+
+from paris_bike_pulse.config import load_settings
+from paris_bike_pulse.ingestion import ingest_hourly_weather
+
+settings = load_settings()
+weather_data = ingest_hourly_weather(
+    settings,
+    pipeline_run_id="2026-07-16-weather-ingestion",
+    start_date=date(2026, 7, 1),
+    end_date=date(2026, 7, 7),
+)
+
+print(len(weather_data.records), weather_data.timezone)
+```
+
+The response coordinates may differ slightly from the configured coordinates
+because the service returns the weather grid cell used for the query.
+
 ## Quality checks
 
 ```bash
